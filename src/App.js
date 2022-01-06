@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { GlobalStyle } from './styles/GlobalStyles';
 import './styles/App.css';
-// import toast, { Toaster } from 'react-hot-toast';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { BsFillArrowUpCircleFill } from 'react-icons/bs';
 
 import Modal from './components/modal/Modal';
@@ -157,7 +156,7 @@ export default class App extends Component {
           </Modal>
         )}
 
-        {/* <Toaster
+        <Toaster
           toastOptions={{
             position: 'bottom-left',
             style: {
@@ -166,7 +165,7 @@ export default class App extends Component {
               color: '#fff',
             },
           }}
-        /> */}
+        />
       </>
     );
   }

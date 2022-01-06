@@ -9,6 +9,8 @@ export class Api {
     this._imageNotFoundLink = notFoundImageUrl;
   }
 
+  firstPage = 1;
+
   fetchPictures = async (query, page = 1) => {
     const urlParams = new URLSearchParams({
       key: this.#API_KEY,

@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GlobalStyle } from './styles/GlobalStyles';
 import './styles/App.css';
 import toast, { Toaster } from 'react-hot-toast';
@@ -7,7 +7,7 @@ import { BsFillArrowUpCircleFill } from 'react-icons/bs';
 import Modal from './components/modal/Modal';
 import SearchBar from './components/searchBar/SearchBar';
 import { Api } from './servises/apiServices';
-import not_found_img_url from './images/broken.png';
+import notFoundImgUrl from './images/broken.png';
 import ImageGallery from './components/imageGallery/ImageGallery';
 import Button from './components/button/Button';
 import Loader from './components/loader/Loader';
@@ -15,158 +15,140 @@ import Error from './components/error/Error';
 import ScrollToTop from 'react-scroll-to-top';
 import ModalImage from './components/modalImage/ModalImage';
 
-const api = new Api(not_found_img_url);
+const api = new Api(notFoundImgUrl);
 
-export default class App extends Component {
-  state = {
-    showModal: false,
-    query: null,
-    galleryItems: [],
-    page: 1,
-    loading: false,
-    error: null,
-    modalContent: null,
-  };
+const App = () => {
+  const [page, setPage] = useState(api.firstPage);
+  const [query, setQuery] = useState(null);
 
-  breakPoints = {
-    response: 479,
-    mobile: 480,
-    tablet: 768,
-    desktop: 1024,
-  };
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
-  totalHits = null;
-  itemToScroll = null;
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [modalContent, setModalContent] = useState(null);
 
-  componentDidUpdate(prevProps, prevState) {
-    const { showModal, query, page, galleryItems } = this.state;
+  const totalHits = useRef(null);
+  const itemToScroll = useRef(null);
+  const isLastPage = useRef(true);
+  const isFirstLoading = useRef(true);
 
-    if (prevState.query !== query) {
-      this.setState({ galleryItems: [] });
-    }
-
-    if ((prevState.query !== query && query) || prevState.page !== page) {
-      this.fetchGalleryItems();
+  // page or query change useEffect
+  useEffect(() => {
+    if (isFirstLoading.current) {
+      isFirstLoading.current = false;
       return;
     }
 
-    if (prevState.showModal !== showModal && !showModal) {
-      this.setState({ modalContent: null });
-    }
+    if (!query) return;
 
-    if (prevState.galleryItems !== galleryItems && page > 1) {
-      document.getElementById(this.itemToScroll)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }
-  }
+    const fetchGalleryItems = async () => {
+      totalHits.current = null;
+      setLoading(true);
+      try {
+        const data = await api.fetchPictures(query, page);
 
-  fetchGalleryItems = async () => {
-    this.totalHits = null;
-    const { query, page, galleryItems } = this.state;
-    this.setState({ loading: true });
-    try {
-      const data = await api.fetchPictures(query, page);
+        if (!data.hits.length) {
+          toast('not found photos');
+          setGalleryItems([]);
+          isLastPage.current = true;
+          return;
+        }
 
-      if (!data.hits.length) {
-        toast('not found photos');
-        this.setState({ galleryItems: [], query: null });
-        return;
+        totalHits.current = data.totalHits;
+        itemToScroll.current = data.hits[0].id;
+        isLastPage.current = api.countTotalResults(page) > totalHits.current;
+
+        const normalizeData = api.getNormalizeData(data, page);
+
+        setGalleryItems(prev =>
+          page === api.firstPage ? normalizeData : [...prev, ...normalizeData],
+        );
+
+        if (page !== api.firstPage) {
+          document.getElementById(itemToScroll.current)?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        }
+      } catch (error) {
+        setError(error);
+        toast.error('Somesing went whrong');
+      } finally {
+        setLoading(false);
       }
+    };
+    fetchGalleryItems();
+  }, [page, query]);
 
-      this.totalHits = data.totalHits;
-      this.itemToScroll = data.hits[0].id;
+  // for modal close
+  useEffect(() => {
+    if (showModal) return;
+    setModalContent(null);
+  }, [showModal]);
 
-      const normalizeData = api.getNormalizeData(data, page);
-
-      this.setState({
-        galleryItems:
-          page === 1 ? normalizeData : [...galleryItems, ...normalizeData],
-      });
-    } catch (error) {
-      this.setState({ error });
-      toast.error('Somesing went whrong');
-    } finally {
-      this.setState({ loading: false });
-    }
+  const getQuery = query => {
+    setQuery(query);
+    setPage(api.firstPage);
   };
 
-  toggleModal = () => this.setState(prev => ({ showModal: !prev.showModal }));
+  const toggleModal = () => setShowModal(prev => !prev);
 
-  getQuery = query => this.setState({ query, page: 1 });
+  const onLoadMoreClick = () => setPage(prev => prev + 1);
 
-  getmodalContent = galleryItem => this.setState({ modalContent: galleryItem });
+  return (
+    <>
+      <GlobalStyle />
 
-  onLoadMoreClick = () => this.setState(({ page }) => ({ page: page + 1 }));
+      <div className="App">
+        <SearchBar getQuery={getQuery} query={query} />
 
-  render() {
-    const {
-      query,
-      showModal,
-      galleryItems,
-      loading,
-      error,
-      modalContent,
-      page,
-    } = this.state;
+        {error && <Error errorMsg={error.message} />}
 
-    const isLastPage = api.countTotalResults(page) > this.totalHits;
-
-    return (
-      <>
-        <GlobalStyle />
-
-        <div className="App">
-          <SearchBar getQuery={this.getQuery} query={query} />
-
-          {error && <Error errorMsg={error.message} />}
-
-          {!!galleryItems.length && (
-            <>
-              <ImageGallery
-                items={galleryItems}
-                onOpen={this.toggleModal}
-                getItemId={this.getmodalContent}
-              />
-              <ScrollToTop
-                smooth
-                top="300"
-                style={{
-                  backgroundColor: 'transparent',
-                  boxShadow: 'none',
-                }}
-                component={
-                  <BsFillArrowUpCircleFill size="2em" color="#cccccc" />
-                }
-              />
-            </>
-          )}
-
-          {loading ? (
-            <Loader />
-          ) : (
-            !isLastPage && <Button onClick={this.onLoadMoreClick} />
-          )}
-        </div>
-
-        {showModal && (
-          <Modal onClose={this.toggleModal}>
-            <ModalImage data={modalContent} />
-          </Modal>
+        {!!galleryItems.length && (
+          <>
+            <ImageGallery
+              items={galleryItems}
+              onOpen={toggleModal}
+              getItemId={setModalContent}
+            />
+            <ScrollToTop
+              smooth
+              top="300"
+              style={{
+                backgroundColor: 'transparent',
+                boxShadow: 'none',
+              }}
+              component={<BsFillArrowUpCircleFill size="2em" color="#cccccc" />}
+            />
+          </>
         )}
 
-        <Toaster
-          toastOptions={{
-            position: 'bottom-left',
-            style: {
-              borderRadius: '10px',
-              background: '#000000',
-              color: '#fff',
-            },
-          }}
-        />
-      </>
-    );
-  }
-}
+        {loading ? (
+          <Loader />
+        ) : (
+          !isLastPage.current && <Button onClick={onLoadMoreClick} />
+        )}
+      </div>
+
+      {showModal && (
+        <Modal onClose={toggleModal}>
+          <ModalImage data={modalContent} />
+        </Modal>
+      )}
+
+      <Toaster
+        toastOptions={{
+          position: 'bottom-left',
+          style: {
+            borderRadius: '10px',
+            background: '#000000',
+            color: '#fff',
+          },
+        }}
+      />
+    </>
+  );
+};
+
+export default App;

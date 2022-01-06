@@ -48,7 +48,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 40px;
+  min-width: 45px;
   height: 40px;
   border: 0;
   opacity: 0.6;

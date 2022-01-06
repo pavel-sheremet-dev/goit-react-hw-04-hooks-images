@@ -1,63 +1,71 @@
-import React, { Component } from 'react';
+import { useState, useRef } from 'react';
+
 import PropTypes from 'prop-types';
 
 import { BsSearch } from 'react-icons/bs';
+import { AiOutlineDelete } from 'react-icons/ai';
 
 import toast from 'react-hot-toast';
 
-export default class SearchBar extends Component {
-  static propTypes = {
-    query: PropTypes.string,
-    getQuery: PropTypes.func.isRequired,
-  };
+const SearchBar = ({ query, getQuery, getInputRef }) => {
+  const [searchQuery, setSearchQuery] = useState('');
 
-  state = {
-    searchQuery: '',
-  };
+  const inputRef = useRef(null);
 
-  handleSubmit = e => {
+  const handleSubmit = e => {
     e.preventDefault();
-    const normalizedQuery = this.getNormalizedQuery();
+    const normalizedQuery = getNormalizedQuery();
     if (!normalizedQuery) {
       toast('Empty query');
       return;
     }
-    if (normalizedQuery === this.props.query) {
+    if (normalizedQuery === query) {
       toast('Same query');
-      this.setState({ searchQuery: '' });
       return;
     }
-    this.props.getQuery(this.state.searchQuery);
-    this.setState({ searchQuery: '' });
+    getQuery(searchQuery);
+    inputRef.current.blur();
   };
 
-  handleChange = e => {
-    this.setState({ searchQuery: e.target.value });
+  const handleInputClear = e => {
+    setSearchQuery('');
+    inputRef.current.focus();
   };
 
-  getNormalizedQuery = () => {
-    return this.state.searchQuery.toLowerCase().trim();
+  const handleChange = e => {
+    setSearchQuery(e.target.value);
   };
 
-  render() {
-    const { searchQuery } = this.state;
-    return (
-      <header className="Searchbar">
-        <form className="SearchForm" onSubmit={this.handleSubmit}>
-          <input
-            onChange={this.handleChange}
-            className="SearchForm-input"
-            type="text"
-            value={searchQuery}
-            autoComplete="off"
-            autoFocus
-            placeholder="Search images and photos"
-          />
-          <button type="submit" className="SearchForm-button">
-            <BsSearch color="#55555" />
-          </button>
-        </form>
-      </header>
-    );
-  }
-}
+  const getNormalizedQuery = () => {
+    return searchQuery.toLowerCase().trim();
+  };
+
+  return (
+    <header className="Searchbar">
+      <form className="SearchForm" onSubmit={handleSubmit}>
+        <button type="button" className="SearchForm-button">
+          <AiOutlineDelete color="#55555" onClick={handleInputClear} />
+        </button>
+        <input
+          onChange={handleChange}
+          className="SearchForm-input"
+          type="text"
+          value={searchQuery}
+          autoComplete="off"
+          placeholder="Search photos"
+          ref={inputRef}
+        />
+        <button type="submit" className="SearchForm-button">
+          <BsSearch color="#55555" />
+        </button>
+      </form>
+    </header>
+  );
+};
+
+SearchBar.propTypes = {
+  query: PropTypes.string,
+  getQuery: PropTypes.func.isRequired,
+};
+
+export default SearchBar;

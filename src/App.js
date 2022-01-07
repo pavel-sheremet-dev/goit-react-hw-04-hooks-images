@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useReducer } from 'react';
 import { GlobalStyle } from './styles/GlobalStyles';
 import './styles/App.css';
 import toast, { Toaster } from 'react-hot-toast';
@@ -17,6 +17,23 @@ import ModalImage from './components/modalImage/ModalImage';
 
 const api = new Api(notFoundImgUrl);
 
+const galleryItemsReducer = (state = [], { type = 'set', payload = [] }) => {
+  switch (type) {
+    case 'set':
+      return payload;
+    case 'add':
+      return [...state, ...payload];
+    default:
+      console.log('unknown type on galleryItemsReducer');
+      break;
+  }
+};
+
+const rTypes = {
+  set: 'set',
+  add: 'add',
+};
+
 const App = () => {
   const [page, setPage] = useState(api.firstPage);
   const [query, setQuery] = useState(null);
@@ -25,7 +42,7 @@ const App = () => {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const [galleryItems, setGalleryItems] = useState([]);
+  const [galleryItems, dispatch] = useReducer(galleryItemsReducer, []);
   const [modalContent, setModalContent] = useState(null);
 
   const totalHits = useRef(null);
@@ -50,7 +67,7 @@ const App = () => {
 
         if (!data.hits.length) {
           toast('not found photos');
-          setGalleryItems([]);
+          dispatch({ type: rTypes.set, payload: [] });
           isLastPage.current = true;
           return;
         }
@@ -60,10 +77,8 @@ const App = () => {
         isLastPage.current = api.countTotalResults(page) > totalHits.current;
 
         const normalizeData = api.getNormalizeData(data, page);
-
-        setGalleryItems(prev =>
-          page === api.firstPage ? normalizeData : [...prev, ...normalizeData],
-        );
+        const reduserType = page === api.firstPage ? rTypes.set : rTypes.add;
+        dispatch({ type: reduserType, payload: normalizeData });
 
         if (page !== api.firstPage) {
           document.getElementById(itemToScroll.current)?.scrollIntoView({

@@ -17,21 +17,24 @@ import ModalImage from './components/modalImage/ModalImage';
 
 const api = new Api(notFoundImgUrl);
 
-const galleryItemsReducer = (state = [], { type = 'set', payload = [] }) => {
+const rTypes = {
+  set: 'set',
+  add: 'add',
+};
+
+const galleryItemsReducer = (
+  state = [],
+  { type = rTypes.set, payload = [] },
+) => {
   switch (type) {
-    case 'set':
+    case rTypes.set:
       return payload;
-    case 'add':
+    case rTypes.add:
       return [...state, ...payload];
     default:
       console.log('unknown type on galleryItemsReducer');
       break;
   }
-};
-
-const rTypes = {
-  set: 'set',
-  add: 'add',
 };
 
 const App = () => {
@@ -45,8 +48,6 @@ const App = () => {
   const [galleryItems, dispatch] = useReducer(galleryItemsReducer, []);
   const [modalContent, setModalContent] = useState(null);
 
-  const totalHits = useRef(null);
-  const itemToScroll = useRef(null);
   const isLastPage = useRef(true);
   const isFirstLoading = useRef(true);
 
@@ -60,8 +61,8 @@ const App = () => {
     if (!query) return;
 
     const fetchGalleryItems = async () => {
-      totalHits.current = null;
       setLoading(true);
+
       try {
         const data = await api.fetchPictures(query, page);
 
@@ -72,16 +73,16 @@ const App = () => {
           return;
         }
 
-        totalHits.current = data.totalHits;
-        itemToScroll.current = data.hits[0].id;
-        isLastPage.current = api.countTotalResults(page) > totalHits.current;
+        isLastPage.current = api.countTotalResults(page) >= data.totalHits;
 
-        const normalizeData = api.getNormalizeData(data, page);
+        const normalizeData = api.getNormalizeData(data);
+
         const reduserType = page === api.firstPage ? rTypes.set : rTypes.add;
         dispatch({ type: reduserType, payload: normalizeData });
 
         if (page !== api.firstPage) {
-          document.getElementById(itemToScroll.current)?.scrollIntoView({
+          const elemToScroll = document.getElementById(data.hits[0].id);
+          elemToScroll?.scrollIntoView({
             behavior: 'smooth',
             block: 'start',
           });

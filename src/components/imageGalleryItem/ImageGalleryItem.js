@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useRef, useEffect } from 'react';
 
 const ImageGalleryItem = ({
   url,
@@ -7,13 +8,22 @@ const ImageGalleryItem = ({
   getItemId,
   tags,
   id,
+  isElToScroll,
+  getElToScroll,
 }) => {
+  const elToScroll = useRef(null);
+
+  useEffect(() => {
+    if (!isElToScroll) return;
+    getElToScroll(elToScroll.current);
+  }, [getElToScroll, isElToScroll]);
+
   const onImageOpen = () => {
     getItemId({ largeImageURL, tags });
     onOpen();
   };
   return (
-    <li className="ImageGalleryItem">
+    <li className="ImageGalleryItem" ref={isElToScroll ? elToScroll : null}>
       <img
         className="ImageGalleryItem-image"
         src={url}

@@ -48,6 +48,9 @@ const App = () => {
   const [galleryItems, dispatch] = useReducer(galleryItemsReducer, []);
   const [modalContent, setModalContent] = useState(null);
 
+  const [idElToScroll, setIdElToScroll] = useState(null);
+  const [elToScroll, setElToScroll] = useState(null);
+
   const isLastPage = useRef(true);
   const isFirstLoading = useRef(true);
 
@@ -81,11 +84,7 @@ const App = () => {
         dispatch({ type: reduserType, payload: normalizeData });
 
         if (page !== api.firstPage) {
-          const elemToScroll = document.getElementById(data.hits[0].id);
-          elemToScroll?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-          });
+          setIdElToScroll(data.hits[0].id);
         }
       } catch (error) {
         setError(error);
@@ -96,6 +95,13 @@ const App = () => {
     };
     fetchGalleryItems();
   }, [page, query]);
+
+  useEffect(() => {
+    elToScroll?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, [elToScroll]);
 
   // for modal close
   useEffect(() => {
@@ -127,6 +133,8 @@ const App = () => {
               items={galleryItems}
               onOpen={toggleModal}
               getItemId={setModalContent}
+              idElToScroll={idElToScroll}
+              getElToScroll={setElToScroll}
             />
             <ScrollToTop
               smooth
@@ -141,7 +149,9 @@ const App = () => {
         )}
 
         {loading ? (
-          <Loader />
+          <>
+            <Loader />
+          </>
         ) : (
           !isLastPage.current && <Button onClick={onLoadMoreClick} />
         )}
